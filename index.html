@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a1d">
+  <title>Flow | Production Flow</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101a1d;
+      --panel: #172326;
+      --panel-raised: #1c2b2e;
+      --border: #2b3b3e;
+      --muted: #91a3a3;
+      --text: #eef4ef;
+      --mint: #a8f0c6;
+      --green: #58d695;
+      --amber: #f2be68;
+      --red: #ef8178;
+      --blue: #8bc7e8;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--bg); color: var(--text); }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    .app { max-width: 1600px; margin: 0 auto; padding: 30px clamp(18px, 4vw, 58px) 38px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .brand-mark { width: 39px; height: 39px; display: grid; place-items: center; border: 1px solid #4a755e; border-radius: 12px; color: var(--mint); background: #20392e; }
+    .brand-mark svg { width: 23px; }
+    .brand-name { font-weight: 750; letter-spacing: .025em; font-size: 16px; }
+    .brand-sub { color: var(--muted); font-size: 11px; margin-top: 3px; letter-spacing: .08em; text-transform: uppercase; }
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .clock { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; margin-right: 9px; }
+    .btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; border-radius: 9px; padding: 10px 14px; border: 1px solid var(--border); background: var(--panel); cursor: pointer; font-size: 12px; font-weight: 650; transition: background .18s, border-color .18s; }
+    .btn:hover { background: var(--panel-raised); border-color: #536968; }
+    .btn-primary { color: #112219; border-color: var(--mint); background: var(--mint); }
+    .btn-primary:hover { background: #c3f6d7; border-color: #c3f6d7; }
+    .btn svg { width: 14px; height: 14px; }
+    .eyebrow { color: var(--mint); font-size: 10px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { font-size: clamp(26px, 3vw, 36px); letter-spacing: -.045em; line-height: 1.12; margin: 9px 0 8px; }
+    .intro { color: var(--muted); font-size: 13px; margin: 0; }
+    .headline { display: flex; justify-content: space-between; align-items: end; gap: 22px; margin-bottom: 24px; }
+    .live-chip { color: var(--green); border: 1px solid #315844; background: #1a3227; padding: 7px 10px; border-radius: 999px; display: inline-flex; gap: 8px; align-items: center; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px #58d6951c; }
+    .live-chip.paused { color: var(--amber); border-color: #665133; background: #342b1d; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; margin-bottom: 18px; }
+    .metric, .surface { border: 1px solid var(--border); border-radius: 13px; background: var(--panel); }
+    .metric { min-height: 102px; padding: 17px 19px; position: relative; overflow: hidden; }
+    .metric-label { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 11px; font-weight: 600; }
+    .metric-icon { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 8px; color: var(--mint); background: #274136; }
+    .metric-icon svg { width: 15px; height: 15px; }
+    .metric-value { font-size: 27px; font-weight: 720; letter-spacing: -.04em; margin-top: 8px; font-variant-numeric: tabular-nums; }
+    .metric-note { color: var(--muted); font-size: 10px; margin-left: 7px; font-weight: 500; letter-spacing: 0; }
+    .surface { padding: 20px; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+    .section-title { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+    .section-caption { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .map-tools { display: flex; align-items: center; gap: 8px; }
+    .speed-select { color: var(--text); background: var(--panel-raised); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; font-size: 11px; }
+    .floor-scroll { overflow-x: auto; scrollbar-color: #405452 transparent; }
+    .floor { position: relative; min-width: 1080px; height: 520px; overflow: hidden; }
+    .routes { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .route-base { fill: none; stroke: #39504d; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .route-glow { fill: none; stroke: #a8f0c6; stroke-width: 2; stroke-dasharray: 5 13; stroke-linecap: round; opacity: .7; }
+    .route-branch { fill: none; stroke: #ba9160; stroke-width: 3; stroke-dasharray: 6 7; stroke-linecap: round; }
+    .route-label { fill: #9aabab; font-size: 11px; font-family: inherit; }
+    .route-label.alert { fill: var(--amber); }
+    .station { position: absolute; top: 110px; width: 150px; min-height: 178px; transform: translateX(-50%); border: 1px solid #344749; border-radius: 12px; background: #192629; padding: 13px; box-shadow: 0 10px 25px #0a1112a8; transition: border-color .2s, box-shadow .2s; }
+    .station.is-busy { border-color: #559270; box-shadow: 0 0 0 1px #4a97694a, 0 10px 25px #0a1112a8; }
+    .station.is-repair { border-color: #725f3c; }
+    .station-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 7px; }
+    .station-index { color: #829493; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
+    .station-name { font-size: 12px; font-weight: 700; margin-top: 4px; white-space: nowrap; }
+    .station-state { font-size: 9px; margin-top: 5px; color: var(--muted); }
+    .station-state.busy { color: var(--green); }
+    .station-state.blocked { color: var(--amber); }
+    .settings-btn { border: 0; padding: 3px; background: transparent; color: #91a3a3; cursor: pointer; border-radius: 5px; }
+    .settings-btn:hover { color: var(--text); background: #2b3b3e; }
+    .settings-btn svg { width: 14px; height: 14px; display: block; }
+    .station-counts { display: flex; justify-content: space-between; border-top: 1px solid #2d3e40; margin-top: 12px; padding-top: 9px; }
+    .station-count { color: var(--muted); font-size: 9px; }
+    .station-count strong { display: block; font-size: 13px; color: var(--text); font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .unit-track { display: flex; gap: 4px; align-items: center; min-height: 19px; margin-top: 9px; overflow: hidden; }
+    .unit-token { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; border-radius: 5px; padding: 3px 5px; color: #132119; background: var(--mint); font-size: 8px; font-weight: 800; animation: arrive .28s ease-out; }
+    .unit-token.waiting { color: #f5d8a7; background: #554328; }
+    .unit-token.traveling { color: #c5eaff; background: #294a59; }
+    .unit-token.rework { color: #f5d8a7; background: #554328; }
+    .travel-layer { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+    .traveler { position: absolute; transform: translate(-50%, -50%); box-shadow: 0 2px 9px #07101180; }
+    .unit-token svg { width: 9px; height: 9px; }
+    @keyframes arrive { from { opacity: .25; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    .station-config { color: #819392; font-size: 9px; margin-top: 6px; white-space: nowrap; }
+    .station-config b { color: #c6d3cd; font-weight: 600; }
+    .repair-station { top: 322px; }
+    .repair-station .station-state { color: var(--amber); }
+    .branch-note { position: absolute; top: 303px; left: 74%; color: var(--amber); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+    .flow-footer { display: flex; justify-content: space-between; align-items: center; gap: 18px; border-top: 1px solid var(--border); padding-top: 14px; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .legend { display: flex; align-items: center; gap: 17px; flex-wrap: wrap; }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-swatch { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); }
+    .legend-swatch.wait { background: var(--amber); }
+    .legend-swatch.move { background: var(--blue); }
+    .footer-note { text-align: right; }
+    .lower-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, .9fr); gap: 15px; margin-top: 16px; }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; min-width: 440px; text-align: left; }
+    th { color: #839493; font-size: 9px; letter-spacing: .09em; text-transform: uppercase; font-weight: 700; padding: 0 10px 10px; }
+    td { border-top: 1px solid #2b3b3e; padding: 10px; font-size: 11px; color: #dbe4df; }
+    td:first-child { font-weight: 650; }
+    .status-label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 10px; }
+    .status-label::before { content: ""; width: 6px; height: 6px; background: #788988; border-radius: 50%; }
+    .status-label.active { color: var(--green); }
+    .status-label.active::before { background: var(--green); }
+    .status-label.inspect { color: var(--amber); }
+    .status-label.inspect::before { background: var(--amber); }
+    .workflow-list { list-style: none; margin: 14px 0 0; padding: 0; }
+    .workflow-list li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #2b3b3e; color: #cdd8d2; font-size: 11px; }
+    .step-num { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; background: #243532; color: var(--mint); font-size: 9px; font-weight: 700; }
+    .workflow-list .branch-step { color: #e4c18c; }
+    .branch-step .step-num { color: #f2be68; background: #3c3222; }
+    .workflow-arrow { margin-left: auto; color: #71817f; }
+    .log-list { display: flex; flex-direction: column; gap: 0; margin-top: 9px; }
+    .log-row { display: grid; grid-template-columns: 54px 8px 1fr; gap: 8px; align-items: start; border-top: 1px solid #2b3b3e; padding: 10px 0; font-size: 10px; color: #cbd5cf; }
+    .log-time { color: #829392; font-variant-numeric: tabular-nums; }
+    .log-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-top: 3px; }
+    .log-dot.warn { background: var(--amber); }
+    .empty-log { color: var(--muted); font-size: 11px; padding: 16px 0 4px; }
+    dialog { width: min(420px, calc(100vw - 32px)); padding: 0; border: 1px solid #405452; border-radius: 14px; color: var(--text); background: #192629; box-shadow: 0 24px 80px #0009; }
+    dialog::backdrop { background: #071011b8; backdrop-filter: blur(3px); }
+    .dialog-content { padding: 23px; }
+    .dialog-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .dialog-title { font-size: 18px; font-weight: 720; margin: 5px 0 6px; }
+    .dialog-description { color: var(--muted); font-size: 11px; line-height: 1.6; margin: 0 0 21px; }
+    .close-btn { border: 0; border-radius: 7px; color: var(--muted); background: transparent; font-size: 21px; cursor: pointer; line-height: 1; }
+    .field { margin-bottom: 15px; }
+    .field label { display: flex; justify-content: space-between; color: #dce5df; font-size: 11px; font-weight: 600; margin-bottom: 7px; }
+    .field label span { color: var(--muted); font-weight: 400; }
+    .field input { width: 100%; padding: 10px 11px; color: var(--text); border: 1px solid var(--border); border-radius: 8px; outline: none; background: #111d20; font-size: 12px; }
+    .field input:focus { border-color: #70b38a; box-shadow: 0 0 0 3px #58d69520; }
+    .field-hint { color: #829392; font-size: 9px; margin-top: 5px; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 21px; }
+    .toast { position: fixed; right: 22px; bottom: 22px; max-width: calc(100vw - 44px); padding: 11px 15px; color: var(--text); border: 1px solid #466050; border-radius: 9px; background: #20332b; box-shadow: 0 8px 24px #0005; font-size: 11px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s; z-index: 5; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @media (max-width: 760px) {
+      .app { padding-top: 20px; }
+      .topbar { align-items: flex-start; }
+      .clock { display: none; }
+      .top-actions { gap: 6px; }
+      .top-actions .btn { padding: 9px 10px; }
+      .headline { align-items: flex-start; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .metric { min-height: 91px; padding: 13px; }
+      .surface { padding: 15px; }
+      .lower-grid { grid-template-columns: 1fr; }
+      .footer-note { max-width: 180px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+    @media print {
+      :root { color-scheme: light; --bg: #fff; --panel: #fff; --panel-raised: #f3f6f3; --border: #cdd6d0; --muted: #52615a; --text: #17231c; }
+      body { background: #fff; color: #17231c; }
+      .app { max-width: none; padding: 14px; }
+      .top-actions, .map-tools, .settings-btn { display: none; }
+      .surface, .metric, .station { box-shadow: none; break-inside: avoid; }
+      .station { background: #fff; }
+      .floor-scroll { overflow: visible; }
+      .floor { transform: scale(.82); transform-origin: top left; margin-bottom: -80px; }
+      .lower-grid { grid-template-columns: 1.5fr .9fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand" aria-label="FlexFlow Production Intelligence">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h6l3 5 3-5h4M4 17h6l3-5 3 5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><div class="brand-name">Flow</div><div class="brand-sub">Production intelligence</div></div>
+      </div>
+      <div class="top-actions">
+        <span class="clock" id="wall-clock" aria-label="Current time"></span>
+        <button class="btn" id="reset-button" type="button" title="Reset the simulation">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 8a6.5 6.5 0 1 1 .5 5.3M3.5 3.5V8h4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Reset
+        </button>
+        <button class="btn btn-primary" id="run-button" type="button">
+          <svg id="run-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6 3.8a.8.8 0 0 1 1.2-.7l8.4 5.2a.8.8 0 0 1 0 1.4l-8.4 5.2a.8.8 0 0 1-1.2-.7V3.8Z"/></svg>
+          <span id="run-label">Start line</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="headline" aria-labelledby="page-title">
+      <div>
+        <div class="eyebrow">Plant 01 · Line A · Shift 1</div>
+        <h1 id="page-title">Live production flow</h1>
+        <p class="intro">A real-time view of units moving through your Flow line.</p>
+      </div>
+      <div class="live-chip paused" id="live-status" role="status"><span class="live-dot"></span><span id="live-label">LINE PAUSED</span></div>
+    </section>
+
+    <section class="metrics" aria-label="Production metrics">
+      <article class="metric"><div class="metric-label">Units in <span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M3 10h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div><div class="metric-value" id="metric-in">0</div></article>
+      <article class="metric"><div class="metric-label">Units out <span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M3 10h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div><div class="metric-value" id="metric-out">0</div></article>
+      <article class="metric"><div class="metric-label">First-pass yield <span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="m4 10 4 4 8-8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div><div class="metric-value" id="metric-yield">—<span class="metric-note">no inspections yet</span></div></article>
+      <article class="metric"><div class="metric-label">In process <span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 6v4l2.5 1.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span></div><div class="metric-value" id="metric-wip">0</div></article>
+    </section>
+
+    <section class="surface" aria-labelledby="floor-title">
+      <div class="section-heading">
+        <div><div class="section-title" id="floor-title">Floor overview</div><div class="section-caption">Follow each unit from receiving to finished goods</div></div>
+        <div class="map-tools"><label for="speed-select" class="section-caption">Simulation speed</label><select class="speed-select" id="speed-select" aria-label="Simulation speed"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select></div>
+      </div>
+      <div class="floor-scroll">
+        <div class="floor" id="floor-map" aria-label="Animated production floor map">
+          <svg class="routes" viewBox="0 0 1080 520" preserveAspectRatio="none" role="img" aria-label="Units flow from receiving through kitting, assembly, inspection, and packout. Failed units route to repair and return to inspection.">
+            <defs>
+              <marker id="arrow-main" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#718d82"/></marker>
+              <marker id="arrow-repair" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#ba9160"/></marker>
+            </defs>
+            <path class="route-base" d="M90 94H990" marker-end="url(#arrow-main)"/>
+            <path class="route-glow" d="M90 94H990"/>
+            <path class="route-branch" d="M630 116V372" marker-end="url(#arrow-repair)"/>
+            <path class="route-branch" d="M810 372H680Q650 372 650 342V120" marker-end="url(#arrow-repair)"/>
+            <text class="route-label alert" x="642" y="308">FAIL · REPAIR</text>
+          </svg>
+          <div id="station-layer"></div>
+          <div class="travel-layer" id="travel-layer" aria-hidden="true"></div>
+          <div class="branch-note">↗ pass · re-inspect</div>
+        </div>
+      </div>
+      <div class="flow-footer">
+        <div class="legend" aria-label="Map legend">
+          <span class="legend-item"><span class="legend-swatch"></span>Processing</span>
+          <span class="legend-item"><span class="legend-swatch wait"></span>Repair / rework</span>
+          <span class="legend-item"><span class="legend-swatch move"></span>In transit</span>
+        </div>
+        <span class="footer-note">Select a station's gear to configure its cycle time and inspection rate.</span>
+      </div>
+    </section>
+
+    <div class="lower-grid">
+      <section class="surface" aria-labelledby="stations-title">
+        <div class="section-heading"><div><div class="section-title" id="stations-title">Station performance</div><div class="section-caption">Throughput and current queue by operation</div></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Station</th><th>State</th><th>Processed</th><th>Queue</th><th>Cycle time</th></tr></thead>
+            <tbody id="station-table"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="surface" aria-labelledby="workflow-title">
+        <div class="section-heading"><div><div class="section-title" id="workflow-title">Routing logic</div><div class="section-caption">Configured unit path through the line</div></div></div>
+        <ol class="workflow-list">
+          <li><span class="step-num">01</span>Receiving<span class="workflow-arrow">→</span></li>
+          <li><span class="step-num">02</span>Kitting<span class="workflow-arrow">→</span></li>
+          <li><span class="step-num">03</span>Assembly<span class="workflow-arrow">→</span></li>
+          <li><span class="step-num">04</span>Quality inspection<span class="workflow-arrow">→</span></li>
+          <li class="branch-step"><span class="step-num">↳</span>Failed inspection → Repair → Re-inspect<span class="workflow-arrow">↗</span></li>
+          <li><span class="step-num">05</span>Packout → Finished goods<span class="workflow-arrow">✓</span></li>
+        </ol>
+      </section>
+      <section class="surface" aria-labelledby="activity-title">
+        <div class="section-heading"><div><div class="section-title" id="activity-title">Recent activity</div><div class="section-caption">Live line events</div></div></div>
+        <div class="log-list" id="activity-log" aria-live="polite"><div class="empty-log">Start the line to see production events.</div></div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="config-dialog" aria-labelledby="dialog-title">
+    <form class="dialog-content" id="config-form">
+      <div class="dialog-title-row">
+        <div><div class="eyebrow">Station setup</div><div class="dialog-title" id="dialog-title">Configure station</div></div>
+        <button class="close-btn" type="button" id="close-dialog" aria-label="Close">&times;</button>
+      </div>
+      <p class="dialog-description">Set the processing time for each unit. Inspection stations also route failed units to repair based on the configured random failure rate.</p>
+      <div class="field"><label for="cycle-input">Processing time <span>seconds per unit</span></label><input id="cycle-input" type="number" min="0.5" max="300" step="0.5" required><div class="field-hint">The station holds one unit at a time; queued units wait their turn.</div></div>
+      <div class="field" id="fail-field"><label for="fail-input">Random fail rate <span>% of inspections</span></label><input id="fail-input" type="number" min="0" max="100" step="1"><div class="field-hint">Failed units route to repair, then return for another inspection.</div></div>
+      <div class="dialog-actions"><button class="btn" type="button" id="cancel-config">Cancel</button><button class="btn btn-primary" type="submit">Save settings</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+      const stationDefinitions = [
+        { id: "receiving", name: "Receiving", shortName: "Receiving", x: 8.3, cycle: 3, next: "kitting" },
+        { id: "kitting", name: "Kitting", shortName: "Kitting", x: 25, cycle: 4, next: "assembly" },
+        { id: "assembly", name: "Assembly", shortName: "Assembly", x: 41.7, cycle: 7, next: "inspection" },
+        { id: "inspection", name: "Inspection", shortName: "Inspection", x: 58.3, cycle: 4, failRate: 8, inspection: true, next: "packout" },
+        { id: "packout", name: "Packout", shortName: "Packout", x: 91.7, cycle: 3, next: null },
+        { id: "repair", name: "Repair", shortName: "Repair", x: 75, cycle: 8, repair: true, next: "inspection" }
+      ];
+      const $ = (id) => document.getElementById(id);
+      const stations = new Map();
+      const units = new Map();
+      let running = false;
+      let nextUnitNumber = 1;
+      let sourceElapsed = 0;
+      let totalIn = 0;
+      let totalOut = 0;
+      let inspections = 0;
+      let initialInspections = 0;
+      let firstPass = 0;
+      let simulationSeconds = 0;
+      let lastFrame = performance.now();
+      let lastRender = 0;
+      let toastTimer;
+      let configuredStation = null;
+      const speedSelect = $("speed-select");
+
+      stationDefinitions.forEach((definition, index) => {
+        stations.set(definition.id, { ...definition, count: 0, queue: [], active: null, remaining: 0 });
+        const station = document.createElement("article");
+        station.className = `station${definition.repair ? " repair-station is-repair" : ""}`;
+        station.dataset.station = definition.id;
+        station.style.left = `${definition.x}%`;
+        station.setAttribute("aria-label", `${definition.name} station`);
+        station.innerHTML = `
+          <div class="station-top">
+            <div><div class="station-index">${definition.repair ? "REWORK LOOP" : `STATION 0${index + 1}`}</div><div class="station-name">${definition.name}</div><div class="station-state" data-state>Idle</div></div>
+            <button class="settings-btn" type="button" aria-label="Configure ${definition.name} station" title="Configure ${definition.name}">
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8.4 3h3.2l.5 1.7c.4.1.8.3 1.2.5l1.6-.8 2.3 2.3-.8 1.6c.2.4.4.8.5 1.2l1.7.5v3.2l-1.7.5c-.1.4-.3.8-.5 1.2l.8 1.6-2.3 2.3-1.6-.8c-.4.2-.8.4-1.2.5l-.5 1.7H8.4l-.5-1.7c-.4-.1-.8-.3-1.2-.5l-1.6.8-2.3-2.3.8-1.6c-.2-.4-.4-.8-.5-1.2l-1.7-.5v-3.2l1.7-.5c.1-.4.3-.8.5-1.2l-.8-1.6 2.3-2.3 1.6.8c.4-.2.8-.4 1.2-.5L8.4 3Z" transform="translate(0 -1.5) scale(.85)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+          </div>
+          <div class="station-counts"><div class="station-count">COMPLETED<strong data-count>0</strong></div><div class="station-count">${definition.inspection ? "FAIL RATE" : "IN QUEUE"}<strong data-queue>${definition.inspection ? `${definition.failRate}%` : "0"}</strong></div></div>
+          <div class="unit-track" data-units aria-label="Units at station"></div>
+          <div class="station-config">Cycle <b data-cycle>${definition.cycle}s</b>${definition.inspection ? ` · Fail <b data-rate>${definition.failRate}%</b>` : ""}</div>`;
+        $("station-layer").appendChild(station);
+        station.querySelector(".settings-btn").addEventListener("click", () => openConfig(definition.id));
+      });
+
+      function openConfig(id) {
+        configuredStation = stations.get(id);
+        $("dialog-title").textContent = `${configuredStation.name} settings`;
+        $("cycle-input").value = configuredStation.cycle;
+        $("fail-field").hidden = !configuredStation.inspection;
+        $("fail-input").value = configuredStation.failRate ?? 0;
+        $("config-dialog").showModal();
+        $("cycle-input").focus();
+      }
+
+      $("config-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const cycle = Number($("cycle-input").value);
+        const failRate = Number($("fail-input").value);
+        if (!configuredStation || !Number.isFinite(cycle) || cycle < 0.5 || cycle > 300) {
+          showToast("Processing time must be between 0.5 and 300 seconds.");
+          return;
+        }
+        if (configuredStation.inspection && (!Number.isFinite(failRate) || failRate < 0 || failRate > 100)) {
+          showToast("Inspection fail rate must be between 0% and 100%.");
+          return;
+        }
+        configuredStation.cycle = cycle;
+        if (configuredStation.inspection) configuredStation.failRate = failRate;
+        $("config-dialog").close();
+        showToast(`${configuredStation.name} settings saved.`);
+        render();
+      });
+      $("close-dialog").addEventListener("click", () => $("config-dialog").close());
+      $("cancel-config").addEventListener("click", () => $("config-dialog").close());
+      $("config-dialog").addEventListener("click", (event) => {
+        if (event.target === $("config-dialog")) $("config-dialog").close();
+      });
+
+      function addLog(message, warning = false) {
+        const log = $("activity-log");
+        const empty = log.querySelector(".empty-log");
+        if (empty) empty.remove();
+        const row = document.createElement("div");
+        row.className = "log-row";
+        const elapsed = Math.floor(simulationSeconds);
+        const stamp = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+        const time = document.createElement("span");
+        time.className = "log-time";
+        time.textContent = stamp;
+        const dot = document.createElement("span");
+        dot.className = `log-dot${warning ? " warn" : ""}`;
+        const text = document.createElement("span");
+        text.textContent = message;
+        row.append(time, dot, text);
+        log.prepend(row);
+        while (log.children.length > 6) log.lastElementChild.remove();
+      }
+
+      function routeUnit(unit, destination, inTransit = true) {
+        unit.travelFrom = unit.location;
+        unit.location = null;
+        unit.travelTo = destination;
+        unit.travelRemaining = inTransit ? 0.85 : 0;
+        unit.rework = destination === "repair" || (destination === "inspection" && unit.rework);
+        if (!inTransit) arriveUnit(unit);
+      }
+
+      function arriveUnit(unit) {
+        const destination = stations.get(unit.travelTo);
+        unit.travelTo = null;
+        unit.location = destination.id;
+        destination.queue.push(unit.id);
+      }
+
+      function spawnUnit() {
+        const id = `FF-${String(nextUnitNumber++).padStart(4, "0")}`;
+        const unit = { id, location: null, travelTo: null, travelRemaining: 0, rework: false, inspectedBefore: false };
+        units.set(id, unit);
+        totalIn++;
+        addLog(`${id} entered the line at Receiving.`);
+        routeUnit(unit, "receiving", false);
+      }
+
+      function finishStation(station, unit) {
+        station.count++;
+        if (station.id === "inspection") {
+          inspections++;
+          const isFirstInspection = !unit.inspectedBefore;
+          if (isFirstInspection) {
+            unit.inspectedBefore = true;
+            initialInspections++;
+          }
+          if (Math.random() < station.failRate / 100) {
+            addLog(`${unit.id} failed inspection · routed to Repair.`, true);
+            routeUnit(unit, "repair");
+            return;
+          }
+          if (isFirstInspection) firstPass++;
+          unit.rework = false;
+        }
+        if (station.id === "packout") {
+          totalOut++;
+          units.delete(unit.id);
+          addLog(`${unit.id} completed Packout · finished goods.`);
+          return;
+        }
+        routeUnit(unit, station.next);
+      }
+
+      function advance(delta) {
+        const speed = Number(speedSelect.value);
+        const elapsed = delta * speed;
+        simulationSeconds += elapsed;
+        sourceElapsed += elapsed;
+        if (sourceElapsed >= 5 && units.size < 28) {
+          sourceElapsed %= 5;
+          spawnUnit();
+        }
+        units.forEach((unit) => {
+          if (unit.travelTo) {
+            unit.travelRemaining -= elapsed;
+            if (unit.travelRemaining <= 0) arriveUnit(unit);
+          }
+        });
+        stations.forEach((station) => {
+          if (station.active) {
+            station.remaining -= elapsed;
+            if (station.remaining <= 0) {
+              const unit = station.active;
+              station.active = null;
+              finishStation(station, unit);
+            }
+          }
+          if (!station.active && station.queue.length) {
+            const id = station.queue.shift();
+            const unit = units.get(id);
+            if (unit) {
+              station.active = unit;
+              station.remaining = station.cycle;
+            }
+          }
+        });
+      }
+
+      function render() {
+        let wip = 0;
+        stations.forEach((station) => {
+          const element = document.querySelector(`[data-station="${station.id}"]`);
+          const state = element.querySelector("[data-state]");
+          const track = element.querySelector("[data-units]");
+          const queueCount = station.queue.length + (station.active ? 1 : 0);
+          wip += queueCount;
+          element.classList.toggle("is-busy", Boolean(station.active));
+          state.className = `station-state${station.active ? " busy" : ""}${station.queue.length > 2 ? " blocked" : ""}`;
+          state.textContent = station.active ? `Processing · ${Math.max(0, station.remaining).toFixed(1)}s` : station.queue.length ? `${station.queue.length} waiting` : "Idle";
+          element.querySelector("[data-count]").textContent = station.count;
+          if (!station.inspection) element.querySelector("[data-queue]").textContent = station.queue.length;
+          element.querySelector("[data-cycle]").textContent = `${station.cycle}s`;
+          if (station.inspection) {
+            element.querySelector("[data-rate]").textContent = `${station.failRate}%`;
+            element.querySelector("[data-queue]").textContent = `${station.failRate}%`;
+          }
+          const ids = [...(station.active ? [station.active.id] : []), ...station.queue.slice(0, 3)];
+          track.replaceChildren(...ids.map((id, index) => {
+            const token = document.createElement("span");
+            token.className = `unit-token${index > 0 ? " waiting" : ""}${station.repair ? " rework" : ""}`;
+            token.textContent = id;
+            return token;
+          }));
+        });
+        $("metric-in").textContent = totalIn;
+        $("metric-out").textContent = totalOut;
+        $("metric-wip").textContent = wip + [...units.values()].filter((unit) => unit.travelTo).length;
+        $("metric-yield").innerHTML = initialInspections ? `${Math.round(firstPass / initialInspections * 100)}%<span class="metric-note">first-pass inspection</span>` : `—<span class="metric-note">no inspections yet</span>`;
+        const travelers = [...units.values()].filter((unit) => unit.travelTo && unit.travelFrom);
+        $("travel-layer").replaceChildren(...travelers.map((unit) => {
+          const token = document.createElement("span");
+          token.className = `unit-token traveler${unit.rework ? " rework" : " traveling"}`;
+          token.textContent = unit.id;
+          const from = stations.get(unit.travelFrom);
+          const to = stations.get(unit.travelTo);
+          const progress = Math.min(1, Math.max(0, 1 - unit.travelRemaining / 0.85));
+          token.style.left = `${from.x + (to.x - from.x) * progress}%`;
+          const fromY = from.repair ? 372 : 94;
+          const toY = to.repair ? 372 : 94;
+          token.style.top = `${fromY + (toY - fromY) * progress}px`;
+          return token;
+        }));
+        $("station-table").replaceChildren(...stationDefinitions.map((definition) => {
+          const station = stations.get(definition.id);
+          const row = document.createElement("tr");
+          const stateText = station.active ? (station.inspection && station.active.inspectedBefore ? "Re-inspection" : "Processing") : station.queue.length ? "Queued" : "Idle";
+          const statusClass = station.active ? (station.inspection && station.active.inspectedBefore ? "inspect" : "active") : "";
+          [station.name, stateText, station.count, station.queue.length, `${station.cycle}s`].forEach((value, index) => {
+            const cell = document.createElement("td");
+            if (index === 1) {
+              const label = document.createElement("span");
+              label.className = `status-label ${statusClass}`;
+              label.textContent = value;
+              cell.appendChild(label);
+            } else cell.textContent = value;
+            row.appendChild(cell);
+          });
+          return row;
+        }));
+      }
+
+      function animationFrame(now) {
+        const delta = Math.min((now - lastFrame) / 1000, 0.25);
+        lastFrame = now;
+        if (running) advance(delta);
+        if (now - lastRender >= 100) {
+          render();
+          lastRender = now;
+        }
+        requestAnimationFrame(animationFrame);
+      }
+
+      function setRunning(value) {
+        running = value;
+        $("run-label").textContent = running ? "Pause line" : "Start line";
+        $("run-icon").innerHTML = running
+          ? '<path d="M5 4.5h3.5v11H5zM11.5 4.5H15v11h-3.5z"/>'
+          : '<path d="M6 3.8a.8.8 0 0 1 1.2-.7l8.4 5.2a.8.8 0 0 1 0 1.4l-8.4 5.2a.8.8 0 0 1-1.2-.7V3.8Z"/>';
+        $("live-status").classList.toggle("paused", !running);
+        $("live-label").textContent = running ? "LINE RUNNING" : "LINE PAUSED";
+        if (running) addLog("Production line started.");
+      }
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+      }
+
+      $("run-button").addEventListener("click", () => setRunning(!running));
+      $("reset-button").addEventListener("click", () => {
+        setRunning(false);
+        stations.forEach((station) => { station.count = 0; station.queue = []; station.active = null; station.remaining = 0; });
+        units.clear();
+        nextUnitNumber = 1;
+        sourceElapsed = 0;
+        totalIn = 0;
+        totalOut = 0;
+        inspections = 0;
+        initialInspections = 0;
+        firstPass = 0;
+        simulationSeconds = 0;
+        $("activity-log").innerHTML = '<div class="empty-log">Start the line to see production events.</div>';
+        render();
+        showToast("Simulation reset. Station settings were kept.");
+      });
+
+      function updateClock() {
+        $("wall-clock").textContent = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date());
+      }
+      updateClock();
+      setInterval(updateClock, 1000);
+      render();
+      requestAnimationFrame(animationFrame);
+    })();
+  </script>
+</body>
+</html>
